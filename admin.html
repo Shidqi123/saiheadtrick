@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Headtrick</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1e1e1e;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .admin-box {
+      background: #333;
+      padding: 20px;
+      border-radius: 10px;
+      width: 700px;
+      text-align: center;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+    }
+    table {
+      width: 100%;
+      margin-top: 15px;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #555;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+    }
+    .generate {
+      background: limegreen;
+      color: black;
+    }
+    .delete {
+      background: red;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-box">
+  <h2>🔑 Admin Panel - Headtrick</h2>
+
+  <input type="number" id="duration" placeholder="Durasi (hari)">
+  <input type="number" id="maxDevice" placeholder="Maksimal Device">
+  <button class="generate" onclick="generateKey()">Generate Key</button>
+
+  <h3>📋 Daftar Keys</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Key</th>
+        <th>Expired</th>
+        <th>Max Device</th>
+        <th>Used Devices</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="keysTable"></tbody>
+  </table>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+  // Konfigurasi Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCKI71A-pb1E4qx8aso2-j3W_lS5q8ny6g",
+    authDomain: "saikuto-76536.firebaseapp.com",
+    databaseURL: "https://saikuto-76536-default-rtdb.firebaseio.com",
+    projectId: "saikuto-76536",
+    storageBucket: "saikuto-76536.firebasestorage.app",
+    messagingSenderId: "671219937980",
+    appId: "1:671219937980:web:e5b285c8a0100cbfd916b9"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Fungsi generate key random
+  function randomKey(length = 12) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let key = "KEY_";
+    for (let i = 0; i < length; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return key;
+  }
+
+  // Tambah key baru
+  function generateKey() {
+    const duration = parseInt(document.getElementById("duration").value);
+    const maxDevice = parseInt(document.getElementById("maxDevice").value);
+
+    if (!duration || !maxDevice) {
+      alert("Isi durasi & max device!");
+      return;
+    }
+
+    const key = randomKey();
+    const expiredAt = new Date();
+    expiredAt.setDate(expiredAt.getDate() + duration);
+
+    db.ref("keys/" + key).set({
+      expiredAt: expiredAt.toISOString(),
+      maxDevice: maxDevice,
+      usedDevices: {}
+    });
+
+    alert("Key berhasil dibuat: " + key);
+  }
+
+  // Hapus key
+  function deleteKey(key) {
+    if (confirm("Hapus key: " + key + "?")) {
+      db.ref("keys/" + key).remove();
+    }
+  }
+
+  // Load data keys
+  function loadKeys() {
+    db.ref("keys").on("value", snapshot => {
+      const table = document.getElementById("keysTable");
+      table.innerHTML = "";
+      snapshot.forEach(child => {
+        const key = child.key;
+        const data = child.val();
+        const tr = document.createElement("tr");
+
+        const usedDevices = data.usedDevices ? Object.keys(data.usedDevices).join(", ") : "-";
+
+        tr.innerHTML = `
+          <td>${key}</td>
+          <td>${data.expiredAt}</td>
+          <td>${data.maxDevice}</td>
+          <td>${usedDevices}</td>
+          <td><button class="delete" onclick="deleteKey('${key}')">Hapus</button></td>
+        `;
+        table.appendChild(tr);
+      });
+    });
+  }
+
+  loadKeys();
+</script>
+</body>
+</html>
